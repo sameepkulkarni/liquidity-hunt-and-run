@@ -7,7 +7,11 @@ import concurrent.futures
 import warnings
 
 
-from backtesting_v1 import SwingBacktesterWithScaling  # assuming the class is in this file/module
+from backtesting_without_scaling import SwingBacktesterWithoutScaling  # assuming the class is in this file/module
+
+def safe_divide(a, b):
+    return a / b if b != 0 else np.nan
+
 
 def generate_summary(trades_folder, output_file):
     pattern = os.path.join(trades_folder, "*.csv")
@@ -16,8 +20,6 @@ def generate_summary(trades_folder, output_file):
     for file in glob.glob(pattern):
         filename = os.path.basename(file)
         parts = filename.replace(".csv", "").split("_")
-        if len(parts) < 4:
-            continue
 
         try:
             lag = int(parts[1].replace("lag", ""))
@@ -46,12 +48,12 @@ def generate_summary(trades_folder, output_file):
         losing_pnl = df.loc[df['PnL'] < 0, 'PnL'].sum()
         efficiency = (df['PnL'] / df['MFE'].replace(0, float('nan'))) * 100
         avg_efficiency = efficiency.mean()
-        total_units = df['Units'].sum()
+        # total_units = df['Units'].sum()
 
         sharpe_like = safe_divide(avg_pnl, np.std([avg_win, abs(avg_loss)]))
         expectancy = (win_rate / 100) * avg_win + (1 - win_rate / 100) * avg_loss
         normalized_pnl = safe_divide(total_pnl, total_trades)
-        pnl_per_unit = safe_divide(total_pnl, total_units)
+        # pnl_per_unit = safe_divide(total_pnl, total_units)
         efficiency_ratio = safe_divide(avg_pnl, abs(avg_mae))
 
         downside_returns = df[df['PnL'] < 0]['PnL']
@@ -62,7 +64,7 @@ def generate_summary(trades_folder, output_file):
             'Lag': lag,
             'Window': window,
             'Total Trades': total_trades,
-            'Total Units': total_units,
+            # 'Total Units': total_units,
             'Win Rate (%)': win_rate,
             'Total PnL': total_pnl,
             'Average PnL': avg_pnl,
@@ -81,11 +83,11 @@ def generate_summary(trades_folder, output_file):
             'Sortino Ratio': sortino_ratio,
             'Expectancy': expectancy,
             'Normalized PnL': normalized_pnl,
-            'PnL per Unit': pnl_per_unit,
+            # 'PnL per Unit': pnl_per_unit,
             'Efficiency Ratio': efficiency_ratio
         })
 
     summary_df = pd.DataFrame(summary_rows)
-    summary_df.sort_values(by=["Lag", "Window"], inplace=True)
+    # summary_df.sort_values(by=["Lag", "Window"], inplace=True)
     summary_df.to_csv(output_file, index=False)
     print(f"\n🚀 Final summary saved to {output_file}")
